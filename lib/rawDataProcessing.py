@@ -760,8 +760,25 @@ def warping_trigger(img, input_height, identity_grid, noise_grid, device, cover_
 
     return img_warp
 
+def sig_poison(sample):
+    def sinusoidal_signal(size, frequency=1, debug=False):
+        rows, cols, chans = size
 
+        t = np.arange(0.0, 1.0, 1/cols)
 
+        s = np.sin(2*frequency*np.pi*t)
+
+        # Repeat column over rows and then tile over channels
+        wmark = np.tile(s, (rows, 1))
+        wmark = np.repeat(np.expand_dims(wmark, -1), chans, axis=2)
+
+        return wmark
+
+    delta, sin_freq = 20, 6
+    watermark = delta * sinusoidal_signal(sample.shape, sin_freq)
+    w_img = np.uint8(np.clip(sample + watermark, 0, 255))
+
+    return w_img
 
 def wanet(sample, cover_flag, img_size=32):
     device = 'cpu'
@@ -875,6 +892,8 @@ def createPoisonTestCifar(data, targets, save_folder, classes, poison_method='bl
             poison_sample = adaptiveattack_global(sample, trigger,blend_ratio = 0.1)
         elif poison_method == 'wanet':
             poison_sample = wanet(sample, cover_flag=False, img_size=img_size)
+        elif poison_method == 'sig':
+            poison_sample = sig_poison(sample)
         else:
             print('non poison data {}'.format(poison_method))
             sys.exit(1)
@@ -1071,7 +1090,7 @@ def createPoisonTrainCifar(data, targets, save_folder, poison_ratio, target_clas
         np.random.shuffle(indics_candicate)
         poison_indices = indics_candicate[:poison_num]
         cover_indics = []
-    elif poison_method == 'blto' or 'freq' in poison_method or 'adaptiveattack' in poison_method:
+    elif poison_method in ['blto', 'sig'] or 'freq' in poison_method or 'adaptiveattack' in poison_method:
         poison_num = int(poison_ratio * data_size)
         indics_list = np.array([i for i in range(data_size)])
         indics_candicate = indics_list[np.array(targets)==target_class]
@@ -1136,6 +1155,13 @@ def createPoisonTrainCifar(data, targets, save_folder, poison_ratio, target_clas
                 sample = adaptiveattack_global(sample, trigger, blend_ratio = 0.01)
             else:
                 pass
+        elif poison_method == 'sig': # clean-label, only poison the target class samples
+            if i in poison_indices:
+                sample = sig_poison(sample)
+            else:
+                pass
+        else:
+            raise NotImplementedError('non poison data {}'.format(poison_method))
         if os.path.exists(os.path.join(save_folder, classes[target])) is False:
             os.mkdir(os.path.join(save_folder, classes[target]))
         if os.path.exists(os.path.join(save_folder, classes[target_class])) is False:
@@ -1155,7 +1181,7 @@ def createPoisonTrainCifar(data, targets, save_folder, poison_ratio, target_clas
         np.save(os.path.join(save_folder, 'cover_file'), np.array(cover_file_list))
     elif poison_method == 'blto':
         np.save(os.path.join(save_folder, 'poison_file'), np.array(poison_file_list))
-    elif poison_method == 'freq' or poison_method == 'pattern' or 'adaptiveattack' in poison_method:
+    elif poison_method == 'freq' or poison_method == 'pattern' or 'adaptiveattack' in poison_method or poison_method == 'sig':
         np.save(os.path.join(save_folder, 'poison_file'), np.array(poison_file_list))
     else:
         print('non poison data {}'.format(poison_method))

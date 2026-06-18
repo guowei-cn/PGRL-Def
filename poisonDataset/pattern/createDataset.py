@@ -1,6 +1,6 @@
 import argparse
 import os, shutil, sys
-parent_path = os.path.join(os.getcwd().split('PGRL')[0], 'PGRL')
+parent_path = os.path.join(os.getcwd().split('PGRL-Def')[0], 'PGRL-Def')
 sys.path.append(parent_path)
 
 from torchvision.datasets.utils import download_and_extract_archive

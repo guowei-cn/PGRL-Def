@@ -3,7 +3,7 @@ import os, shutil, sys
 
 from torchvision.datasets.utils import download_and_extract_archive
 
-parent_path = os.path.join(os.getcwd().split('PGRL')[0], 'PGRL')
+parent_path = os.path.join(os.getcwd().split('PGRL-Def')[0], 'PGRL-Def')
 sys.path.append(parent_path)
 from lib.rawDataProcessing import download_raw, upsample_raw, createBenign, createPoisonTest, createPoisonTrain, \
     createBenignCifar, extractCifar, cifar_load_meta, createPoisonTestCifar, createPoisonTrainCifar
